@@ -385,6 +385,7 @@ public class ExifInterface {
 
     // Maximum size for checking file type signature (see image_type_recognition_lite.cc)
     private static final int SIGNATURE_CHECK_SIZE = 5000;
+    private static final int JPEG_SIGNATURE_SIZE = 3;
 
     private static final byte[] JPEG_SIGNATURE = new byte[] { (byte) 0xff, (byte) 0xd8, (byte) 0xff };
     private static final String RAF_SIGNATURE = "FUJIFILMCCD-RAW";
@@ -1974,15 +1975,23 @@ public class ExifInterface {
 
     // Checks the type of image file
     private int getMimeType(BufferedInputStream in) throws IOException {
+        in.mark(JPEG_SIGNATURE_SIZE);
+        byte[] jpegSignatureCheckBytes = new byte[JPEG_SIGNATURE_SIZE];
+        if (in.read(jpegSignatureCheckBytes) != JPEG_SIGNATURE_SIZE) {
+            throw new EOFException();
+        }
+        in.reset();
+        if (isJpegFormat(jpegSignatureCheckBytes)) {
+            return IMAGE_TYPE_JPEG;
+        }
+
         in.mark(SIGNATURE_CHECK_SIZE);
         byte[] signatureCheckBytes = new byte[SIGNATURE_CHECK_SIZE];
         if (in.read(signatureCheckBytes) != SIGNATURE_CHECK_SIZE) {
             throw new EOFException();
         }
         in.reset();
-        if (isJpegFormat(signatureCheckBytes)) {
-            return IMAGE_TYPE_JPEG;
-        } else if (isRafFormat(signatureCheckBytes)) {
+        if (isRafFormat(signatureCheckBytes)) {
             return IMAGE_TYPE_RAF;
         } else if (isOrfFormat(signatureCheckBytes)) {
             return IMAGE_TYPE_ORF;
